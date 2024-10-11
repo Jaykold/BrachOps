@@ -1,0 +1,1 @@
+This project is a Python-based mirror of the original [BrachOps](https://github.com/The-CodeINN/brachops.git) which was written in TypeScript. This version aims to provide the same functionalities and performance using Python.
