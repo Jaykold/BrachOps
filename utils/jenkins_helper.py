@@ -19,7 +19,7 @@ class JenkinsHelper:
           <keepDependencies>false</keepDependencies>
           <properties/>
           <definition class="org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition" plugin="workflow-cps@2.87">
-            <script>\n{pipeline_script}</script>
+            <script>\n{escaped_pipeline_script}</script>
             <sandbox>true</sandbox>
           </definition>
           <triggers/>
@@ -37,7 +37,6 @@ class JenkinsHelper:
         
 if __name__ == '__main__':
     try:
-      server = Jenkins(config.JENKINS_URL, config.JENKINS_CRED['USERNAME'], config.JENKINS_CRED['PASSWORD'])
       project_name = "Test4"
       git_url = "https://github.com/The-CodeINN/quizzie.git"
       build_path = "server/quizzie/quizzie.csproj"
@@ -46,7 +45,7 @@ if __name__ == '__main__':
       jenkins = JenkinsHelper(config.JENKINS_URL, jenkins_cred['USERNAME'], jenkins_cred['PASSWORD'])
       scan_pipeline = ScanPipelineGenerator(project_name, git_url, build_path, project_type)
       pipeline_script = scan_pipeline.generate()
-      jenkins.create_job(project_name, pipeline_script)
       config_xml =jenkins.config_xml(pipeline_script)
+      jenkins.create_job(project_name, pipeline_script)
     except Exception as e:
         raise CustomException(e, sys) from e
