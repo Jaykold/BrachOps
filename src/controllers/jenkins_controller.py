@@ -1,10 +1,9 @@
-import sys
 from typing import List 
 from fastapi import HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from src.services.jenkins_service import JenkinsService
-from utils.exception import CustomException
+from utils.exception import JenkinsCustomException
 from utils.logger import logging
 from src.helpers.scan_pipeline_generator import ScanPipelineGenerator
 from src.helpers.config_xml import config_xml
@@ -20,16 +19,28 @@ class JenkinsInfo(BaseModel):
     jobs: List[JobInfo]
     url: str
 
+async def get_jenkins_info_handler():
+    try:
+        print("Getting info....")
+        info = await jenkins_service.get_jenkins_info()
+        return info
+    except JenkinsCustomException as e:
+        logging.error(f"Error getting Jenkins info: {e}")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+    
+async def get_crumb_handler():
+    return await jenkins_service.crumb
+
 async def check_job_exists_handler(job_name: str) -> bool:
     try:
         return await jenkins_service.check_job_exists(job_name)
-    except Exception as e:
+    except JenkinsCustomException as e:
         logging.error(f"Error checking if job exists: {e}")
-        raise HTTPException(status_code=500, detail="An error occurred while checking job existence") from e
+        raise HTTPException(status_code=500, detail=str(e)) from e
     
 async def get_build_status_handler(job_name: str, build_id: int):
     try:
-        exists = await jenkins_service.check_job_exists(job_name)
+        exists = await check_job_exists_handler(job_name)
         if not exists:
             raise HTTPException(status_code=404, detail=f"Job '{job_name}' does not exists")
         
@@ -47,15 +58,27 @@ async def get_build_status_handler(job_name: str, build_id: int):
             "timestamp": build_info.get("timestamp"),
         }
         return JSONResponse(content={"message": relevant_info}, status_code=200)
-    except Exception as e:
+    except JenkinsCustomException as e:
         logging.error(f"Error getting build status: {e}")
-        raise HTTPException(status_code=500, detail="An error occured while retrieving the build status") from e
+        raise HTTPException(status_code=500, detail=str(e)) from e
+    
+async def build_job_handler(job_name: str) -> None:
+    try:
+        exists = await check_job_exists_handler(job_name)
+        if not exists:
+            raise JenkinsCustomException(f"Job '{job_name}' does not exists", "Job does not exists")
+
+        await jenkins_service.trigger_job(job_name)
+        return JSONResponse(content={"message": f"Job '{job_name}' triggered successfully"}, status_code=201)
+    except JenkinsCustomException as e:
+        logging.error(f"Error triggering job: {e}")
+        raise HTTPException(status_code=500, detail=str(e)) from e
     
 async def create_scan_job_handler(job_name: str, git_url: str, build_path: str, project_type: str) -> None:
     try:
-        exists = await jenkins_service.check_job_exists(job_name)
+        exists = await check_job_exists_handler(job_name)
         if exists:
-            raise CustomException(f"Job '{job_name}' already exists", "Job already exists")
+            raise JenkinsCustomException(f"Job '{job_name}' already exists", "Job already exists")
         
         # Generate pipeline script
         logging.info("Generating pipeline script")
@@ -66,8 +89,20 @@ async def create_scan_job_handler(job_name: str, git_url: str, build_path: str, 
         # Create scan job
         logging.info("Creating scan job")
         await jenkins_service.create_scan_job(job_name, xml)
-        await jenkins_service.trigger_job(job_name)
-        return JSONResponse(content={f"Scan job '{job_name}' created successfully"}, status_code=201)
+        #await build_job_handler(job_name)
+        return JSONResponse(content={"message":f"Scan job '{job_name}' created successfully"}, status_code=201)
     except HTTPException as e:
         logging.error(f"Error creating scan job: {e}")
         raise HTTPException(status_code=500, detail="An error occurred while creating the scan job") from e
+    
+async def delete_job_handler(job_name: str) -> None:
+    try:
+        exists = await jenkins_service.check_job_exists(job_name)
+        if not exists:
+            raise JenkinsCustomException(f"Job '{job_name}' does not exists", "Job does not exists")
+
+        await jenkins_service.delete_job(job_name)
+        return JSONResponse(content={"message": f"Job '{job_name}' deleted successfully"}, status_code=201)
+    except JenkinsCustomException as e:
+        logging.error(f"Error deleting job: {e}")
+        raise HTTPException(status_code=500, detail="An error occurred while deleting the job") from e

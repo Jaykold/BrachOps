@@ -1,11 +1,11 @@
 #from pyjen.jenkins import Jenkins
-import config
 from aiojenkins import Jenkins, jobs, builds, queue
+import config
 
 class JenkinsService:
 
     def __init__(self):
-        self.jenkins = Jenkins(config.JENKINS_URL, config.JENKINS_CRED['USERNAME'], config.JENKINS_CRED['PASSWORD'])
+        self.jenkins = Jenkins(config.JENKINS_URL, config.JENKINS_CRED['USERNAME'], config.JENKINS_CRED['API_TOKEN'], verify=False)
         self.job = jobs.Jobs(self.jenkins)
         self.build = builds.Builds(self.jenkins)
         self.queue = queue.Queue(self.jenkins)

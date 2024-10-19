@@ -6,18 +6,19 @@ class ScanPipelineGenerator:
         self.project_type = project_type
 
     def dot_net_core_pipeline(self):
-        return '''
+        return """
         stage('Git Checkout') {
             steps {
                 echo 'Checking out source code from Git...'
-                git branch: 'main', url: "${GIT_URL}"
+                git branch: 'main', url: "${env.GIT_URL}"
             }
         }
 
         stage('Restore Packages') {
             steps {
                 echo 'Restoring packages...'
-                sh "dotnet restore ${BUILD_PATH}"
+                sh "dotnet restore ${env.BUILD_PATH}"
+            }
             }
         }
 
@@ -37,11 +38,11 @@ class ScanPipelineGenerator:
 
         stage('SonarQube Begin Analysis') {
             steps {
-                withSonarQubeEnv('sonarqube') {
+                withSonarQubeEnv('Sonarqube') {
                     echo 'Running SonarQube Analysis...'
-                    sh """export PATH="$PATH:$HOME/.dotnet/tools"
-                    dotnet sonarscanner begin /k:${JOB_NAME} /n:"brachops"
-                    """
+                    sh '''export PATH="$PATH:$HOME/.dotnet/tools"
+                    dotnet sonarscanner begin /k:${JOB_NAME} /n:'brachops-${JOB_NAME}'
+                    '''
                 }
             }
         }
@@ -55,11 +56,11 @@ class ScanPipelineGenerator:
 
         stage('SonarQube End Analysis') {
             steps {
-                withSonarQubeEnv('sonarqube') {
-                    sh """
-                    export PATH="$PATH:$HOME/.dotnet/tools"
+                withSonarQubeEnv('Sonarqube') {
+                    sh '''
+                    export PATH='$PATH:$HOME/.dotnet/tools'
                     dotnet sonarscanner end
-                    """
+                    '''
                 }
             }
         }
@@ -72,7 +73,7 @@ class ScanPipelineGenerator:
                 }
             }
         }
-        '''.strip()
+        """
 
     def node_js_pipeline(self):
         return """
@@ -106,9 +107,13 @@ class ScanPipelineGenerator:
 
         stage('SonarQube Begin Analysis') {
             steps {
-                withSonarQubeEnv('sonarqube') {
+                withSonarQubeEnv('Sonarqube') {
                     echo 'Running SonarQube Analysis...'
-                    sh 'export PATH="$PATH:$HOME/.nvm" && sonar-scanner -Dsonar.projectKey=${JOB_NAME} -Dsonar.projectName="brachops" -Dsonar.sources=.'
+                    sh '''export PATH="$PATH:$HOME/.nvm" 
+                    && sonar-scanner -Dsonar.projectKey=${JOB_NAME} 
+                    -Dsonar.projectName="Brachops-${JOB_NAME}" 
+                    -Dsonar.sources=.
+                    '''
                 }
             }
         }
@@ -124,7 +129,7 @@ class ScanPipelineGenerator:
         """.strip()
     def generate(self):
         tools = 'tools {nodejs "node"}\n' if self.project_type == 'Node.js' else ""
-        project_specific_pipeline = self.dot_net_core_pipeline() if self.project_type == '.NET Core' else self.node_js_pipeline()
+        project_specific_pipeline = self.dot_net_core_pipeline() if self.project_type == 'DotNetCore' else self.node_js_pipeline()
         return f"""
         pipeline {{
         agent any
@@ -136,5 +141,6 @@ class ScanPipelineGenerator:
         }}
         stages {{
             {project_specific_pipeline}
+            }}
         }}
-        }}""".strip()
+        """.strip()
