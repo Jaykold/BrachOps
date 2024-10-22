@@ -7,6 +7,6 @@ load_dotenv()
 
 # Application configuration
 DEBUG = os.getenv('DEBUG', 'False').lower() in ('true', '1', 't')
-PORT = os.getenv('PORT')
+PORT = int(os.getenv('UVICORN_PORT'))
 JENKINS_URL = os.getenv('JENKINS_URL')
 JENKINS_CRED = json.loads(os.getenv('JENKINS_CRED'))
