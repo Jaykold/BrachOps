@@ -27,9 +27,6 @@ async def get_jenkins_info_handler():
     except JenkinsCustomException as e:
         logging.error(f"Error getting Jenkins info: {e}")
         raise HTTPException(status_code=500, detail=str(e)) from e
-    
-async def get_crumb_handler():
-    return await jenkins_service.crumb
 
 async def check_job_exists_handler(job_name: str) -> bool:
     try:
