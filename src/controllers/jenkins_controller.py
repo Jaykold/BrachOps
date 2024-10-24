@@ -86,7 +86,7 @@ async def create_scan_job_handler(job_name: str, git_url: str, build_path: str, 
         # Create scan job
         logging.info("Creating scan job")
         await jenkins_service.create_scan_job(job_name, xml)
-        #await build_job_handler(job_name)
+        await build_job_handler(job_name)
         return JSONResponse(content={"message":f"Scan job '{job_name}' created successfully"}, status_code=201)
     except HTTPException as e:
         logging.error(f"Error creating scan job: {e}")
