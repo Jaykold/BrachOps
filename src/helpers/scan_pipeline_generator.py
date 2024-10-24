@@ -10,14 +10,14 @@ class ScanPipelineGenerator:
         stage('Git Checkout') {{
             steps {{
                 echo 'Checking out source code from Git...'
-                git branch: 'main', url: "{self.git_url}"
+                git branch: 'main', url: "${{GIT_URL}}"
             }}
         }}
 
         stage('Restore Packages') {{
             steps {{
                 echo 'Restoring packages...'
-                sh "dotnet restore {self.build_path}"
+                sh "dotnet restore ${{BUILD_PATH}}"
             }}
         }}
 
@@ -50,7 +50,7 @@ class ScanPipelineGenerator:
         stage('Build Solution') {{
             steps {{
                 echo 'Building the project...'
-                sh "dotnet build {self.build_path} --configuration Release"
+                sh "dotnet build ${{BUILD_PATH}} --configuration Release"
             }}
         }}
 
@@ -68,7 +68,7 @@ class ScanPipelineGenerator:
         stage('File System Scan') {{
             steps {{
                 script {{
-                    def rootFolder = sh(script: "dirname {self.build_path}", returnStatus: true)
+                    def rootFolder = sh(script: "dirname ${{BUILD_PATH}}", returnStatus: true)
                     sh "trivy fs --format table -o trivy-fs-report.html ${{rootFolder}}"
                 }}
             }}
